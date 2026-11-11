@@ -1,0 +1,46 @@
+node_modules/
+coverage/
+*.log
+.DS_Store
+
+# 凭据与本地配置
+.env
+.env.*
+*.env
+
+# 备份、产物与编辑器目录
+tmp/
+backups/
+*.tar.zst
+*.bak
+*.orig
+dist/
+.vscode/
+.idea/
+core.[0-9]*
+
+# 本地研究、旧设计和实例记录不进入公开版本
+/docs/research/
+/docs/design/v3-定稿与实施计划.md
+/docs/local/
+
+# 运行数据与本地索引
+/.dsh/
+/.dsh-assistant/
+/identity/
+/identity-history/
+/profiles/
+/sessions/
+/storages/
+/channels/
+/run/
+/audit/
+/logs/
+/workspace/
+/.codebase-memory/
+.credentials*
+*.pem
+*.key
+*.p12
+*.pfx
+!.env.example

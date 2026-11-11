@@ -1,0 +1,375 @@
+# @junjiangao/assistant-bundle —— 个人 AI 助理的组合补丁
+#
+# 这一层在 dsh-base 与 dsh-web-app 之后应用（profile 的 bundles 顺序决定），做三件事：
+#   1. 摘掉**表现层**（HTTP/浏览器/桌面集成），保留功能层；
+#   2. 把身份装配交给我们自己的 assistant-startup（system-prompt 的 persona 置空）；
+#   3. 插入通道层（channel-core / channel-telegram）与启动器。
+#
+# 依据：docs/design/v4-定稿与实施计划.md §4.2（删除名单）、§4.3（必须保留）、§5（身份）。
+# 修改本文件后请跑 `node deploy/gen-preset.mjs --check`：它会核对删除名单里的 row id 是否
+# 仍存在于当前 DSH 安装里（DSH 升级后 id 可能改名，未命中只会告警、不会崩，所以必须主动查）。
+#
+# 注意：补丁是**按 id 整段替换**，不是深合并；下面重新声明的行都写全了自己拥有的键。
+
+# ── 身份：persona 槽位留空，身份由 assistant-startup 在运行期从文件注册 ──────────
+#
+# dsh-web-app 把 personaPrefix 设成「You are a coding agent…」。v4 要求身份由
+# $DSH_HOME/identity/{SOUL,SYSTEM}.md 决定，因此这里清空，并让 assistant-startup
+# 以独立 section（deployment:* 之外的 assistant:identity-*）注册，避免同一全局层重名。
+- id: system-prompt
+  name: '@deepseek-ai/dsh-system-prompt'
+  config:
+    personaPrefix: ''
+
+# 权限继承 dsh-base：默认 workspace-write + ask。
+# 部署者可用 DSH_PERMISSION_MODE 显式选择；审批应答由 channel-core 接入。
+
+# ── 模型：本机配置，放在 profile 层（不入库）──────────────────────────────────
+#
+# provider id、apiKeyEnv、网关地址与默认模型都是环境相关，不写进仓库。
+# 现有部署在 $DSH_HOME/profiles/assistant/cordis.patch.yml 里配置
+# llm-pi-ai / agent-default-model / subagent-model-selection-settings；
+# 新环境按 README「模型」一节填写。
+# base 的 llm-deepseek（DEEPSEEK_API_KEY）保留，未配置 profile 时直连官方 API。
+
+# ── 保留 connection / file-upload，但去掉它们对 webStartup 的行级依赖 ────────────
+#
+# web-app 给 connection 行声明了 `inject: [webStartup]` 并用 `ctx.webStartup.trustedHosts`
+# 当配置值。我们删掉 web-startup，因此必须重声明这一行：把 inject 清空、trustedHosts 取空。
+# connection 自己只在 `ctx.inject(["webServer"])` 内注册 HTTP 路由，没有 webserver 时
+# 它照样提供 `connection` 服务——session-controller → file-upload → connection 这条链才不断。
+- id: connection
+  name: '@deepseek-ai/dsh-client-connection'
+  inject: []
+  config:
+    trustedHosts: []
+
+# ── 会话全文检索：web-app 默认只开一个内存索引，常驻助理需要跨重启可检索 ─────────
+#
+# `openAt: first-search` 让 sqlite 在第一次搜索时才打开，启动依旧安静。
+- id: session-query-sqlite
+  name: '@deepseek-ai/dsh-session-query-sqlite'
+  config:
+    path: !!js "(process.env.DSH_HOME ?? ((process.env.HOME ?? '.') + '/.dsh-assistant')) + '/storages/session-query.sqlite'"
+    openAt: first-search
+
+# ── 必须保留（看着像表现层，其实是功能层）──────────────────────────────────────
+#
+# session-controller → file-upload → connection → credentials、workspace、schedule、
+# mcp-manager、cordis-host-runner、cordis-inspect-providers、subagent-model-selection-settings、
+# session-stats、session-turn-outline、deliverable-file-references 一律不动。
+# 详见设计文档 §4.3。
+
+# ── 删除名单：表现层 ────────────────────────────────────────────────────────────
+# HTTP 与传输
+# HTTP 传输：没有它就没有 token/cookie/端口
+- id: webserver
+  disabled: true
+
+# 必须与 webserver 同批删除；它硬注入 webServer，只删一个会停在 pending 并触发 StartupError
+- id: web-runtime
+  disabled: true
+
+# Web 命令行提供者；由我们自己的 assistant-startup 代替
+- id: web-startup
+  disabled: true
+
+# 把 Cordis 事件转发到浏览器的桥；删除后提问由 channel-core 认领
+- id: api-remotes
+  disabled: true
+
+# 浏览器专用控制器与集成
+# 浏览器后台任务面板的 host 半
+- id: job-controller
+  disabled: true
+
+# 浏览器终端面板的 host 半
+- id: terminal-controller
+  disabled: true
+
+# 浏览器文件树的 host 半
+- id: workspace-files
+  disabled: true
+
+# 浏览器账号设置
+- id: account-controller
+  disabled: true
+
+# 浏览器设置面板
+- id: settings-controller
+  disabled: true
+
+# 浏览器 Workspace 面板
+- id: workspace-controller
+  disabled: true
+
+# 原生目录选择器（桌面/浏览器交互）
+- id: directory-picker
+  disabled: true
+
+# 桌面「在应用中打开」
+- id: open-in-app
+  disabled: true
+
+# 浏览器插件清单
+- id: plugin-inventory
+  disabled: true
+
+# 浏览器会话导出
+- id: session-log-download
+  disabled: true
+
+# 浏览器点赞/点踩
+- id: message-feedback
+  disabled: true
+
+# 浏览器文档预览的转换后端
+- id: office-to-pdf
+  disabled: true
+
+# 浏览器「本轮改动文件」卡片的数据源
+- id: workspace-changes
+  disabled: true
+
+# 无 host 行为的桥与桌面专属
+# host 半是空 apply()，纯浏览器桥
+- id: message-quotes
+  disabled: true
+
+# 给「检查 DSH 自身」的浏览器会话用的上下文
+- id: harness-dev-context
+  disabled: true
+
+# 桌面遥测
+- id: desktop-product-telemetry
+  disabled: true
+
+# 热重载
+# 热重载：常驻进程不需要，且会引入额外 watcher
+- id: hmr
+  disabled: true
+
+# 全部浏览器客户端（dsh-client-* / dsh-client-ui-*）。
+# connection 与 file-upload 虽然也在 dsh-client-* 命名空间下，但它们是 host 侧功能层，已在上文保留。
+- id: product-analytics
+  disabled: true
+
+- id: ui-file-actions
+  disabled: true
+
+- id: ui-context-menu
+  disabled: true
+
+- id: ui-open-in-app
+  disabled: true
+
+- id: ui-settings-account
+  disabled: true
+
+- id: client-hmr
+  disabled: true
+
+- id: modules
+  disabled: true
+
+- id: cordis-client-runner
+  disabled: true
+
+- id: ui-theme
+  disabled: true
+
+- id: locale
+  disabled: true
+
+- id: shortcuts
+  disabled: true
+
+- id: ui-shortcuts
+  disabled: true
+
+- id: ui-layout
+  disabled: true
+
+- id: ui-renderer
+  disabled: true
+
+- id: ui-session
+  disabled: true
+
+- id: resources
+  disabled: true
+
+- id: ui-sidebar
+  disabled: true
+
+- id: ui-sidebar-right
+  disabled: true
+
+- id: ui-sidebar-documentpreview
+  disabled: true
+
+- id: ui-sidebar-browser
+  disabled: true
+
+- id: ui-sidebar-terminal
+  disabled: true
+
+- id: ui-sidebar-files
+  disabled: true
+
+- id: ui-settings
+  disabled: true
+
+- id: ui-settings-general
+  disabled: true
+
+- id: ui-settings-models
+  disabled: true
+
+- id: ui-plugin-manager
+  disabled: true
+
+- id: ui-settings-plugin-inventory
+  disabled: true
+
+- id: ui-conversation
+  disabled: true
+
+- id: ui-approval
+  disabled: true
+
+- id: ui-chat
+  disabled: true
+
+- id: ui-brand-official
+  disabled: true
+
+- id: ui-attachment
+  disabled: true
+
+- id: ui-file-drag
+  disabled: true
+
+- id: ui-tool
+  disabled: true
+
+- id: ui-cordis
+  disabled: true
+
+- id: ui-deliverables
+  disabled: true
+
+- id: ui-workspace
+  disabled: true
+
+- id: ui-workflow-run
+  disabled: true
+
+- id: ui-input-trigger
+  disabled: true
+
+- id: ui-commands
+  disabled: true
+
+- id: ui-skill
+  disabled: true
+
+- id: ui-agent-team
+  disabled: true
+
+- id: ui-subagent
+  disabled: true
+
+- id: ui-reference
+  disabled: true
+
+- id: ui-secret-mask
+  disabled: true
+
+- id: ui-jobs
+  disabled: true
+
+- id: ui-schedule
+  disabled: true
+
+- id: ui-goal
+  disabled: true
+
+- id: ui-message-feedback
+  disabled: true
+
+- id: ui-model-selection
+  disabled: true
+
+- id: ui-permission
+  disabled: true
+
+- id: ui-agent-preset
+  disabled: true
+
+- id: entry-customization
+  disabled: true
+
+- id: ui-settings-session-log
+  disabled: true
+
+- id: ui-settings-plugins
+  disabled: true
+
+- id: ui-settings-shell
+  disabled: true
+
+- id: ui-settings-agent-loop
+  disabled: true
+
+- id: ui-settings-subagent
+  disabled: true
+
+- id: ui-settings-web-search
+  disabled: true
+
+- id: ui-plan
+  disabled: true
+
+- id: ui-user-questions
+  disabled: true
+
+- id: ui-trajectory
+  disabled: true
+
+# ── 调度：--once / --doctor 下不挂 ─────────────────────────────────────────────
+#
+# 设计文档 §9.6：一次性模式不挂 Telegram、不挂 schedule、不取 pid 锁。
+# 网关之外唯一会自己「到点做事」的行就是 schedule，因此按模式门控。
+#
+# 门控表达式只能读**全局对象**：`disabled` 在 Loader 的启动审计阶段求值，那时行的 `inject`
+# 还没生效，任何 `ctx.<service>` / `ctx.get('<service>')` 都会让该行被判为 "failed to import"。
+# 因此这里直接看启动参数：`--once` / `--doctor` / `--help` 时不挂通道与调度，daemon 时挂。
+# （插件内部还会用 `assistantStartup.mode` 再兜底一次，见 channel-core / channel-telegram 的 apply。）
+- id: schedule
+  inject: [assistantStartup]
+  disabled: !!js "process.argv.some((arg) => /^--(once|doctor|help)(=|$)/.test(arg) || arg === '-o' || arg === '-h')"
+
+# ── 通道层与启动器 ─────────────────────────────────────────────────────────────
+#
+# 顺序即依赖顺序：startup 先提供 assistantStartup，通道行再据此判断要不要挂。
+- insert:
+    # 启动器三模式：daemon / --once / --doctor。身份装配也在这里。
+    - id: assistant-startup
+      name: '@junjiangao/assistant-startup'
+
+    # 通道无关的治理层。owner 白名单来自 TELEGRAM_OWNER_ID；未设置时退化为
+    # 占位值 0（不匹配任何真实用户；部署里请务必显式设置）。
+    - id: channel-core
+      name: '@junjiangao/channel-core'
+      inject: [assistantStartup]
+      disabled: !!js "process.argv.some((arg) => /^--(once|doctor|help)(=|$)/.test(arg) || arg === '-o' || arg === '-h')"
+      config:
+        owners:
+          telegram: !!js "(process.env.TELEGRAM_OWNER_ID ?? '0').split(',').map((value) => value.trim()).filter((value) => value !== '')"
+
+    # Telegram 通道。默认占位符传输（本地 sim/inbox.jsonl）；给真实 token 即切到 Bot API。
+    - id: channel-telegram
+      name: '@junjiangao/channel-telegram'
+      inject: [assistantStartup, channelCore]
+      disabled: !!js "process.argv.some((arg) => /^--(once|doctor|help)(=|$)/.test(arg) || arg === '-o' || arg === '-h')"

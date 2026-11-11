@@ -1,0 +1,10 @@
+# 健康检查（oneshot）：心跳过期就 restart 主单元。由 dsh-assistant-health.timer 触发。
+[Unit]
+Description=Personal AI Assistant health check
+
+[Service]
+Type=oneshot
+Environment=HOME=%h
+Environment=DSH_HOME=%h/.dsh-assistant
+Environment=PATH=@NODE_BIN_DIR@:@PNPM_BIN_DIR@:/usr/local/bin:/usr/bin:/bin
+ExecStart=@REPO_ROOT@/deploy/bin/health.sh

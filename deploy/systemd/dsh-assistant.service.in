@@ -1,0 +1,41 @@
+# 个人 AI 助理的 systemd 用户单元模板。
+#
+# 由 deploy/install.sh 渲染出 ~/.config/systemd/user/dsh-assistant.service：
+#   @REPO_ROOT@    本仓库的绝对路径（ExecStartPre 的启动快照脚本）
+#   @DSH_BIN@      dsh 可执行文件的绝对路径（pnpm 的 shim）
+#   @ASSISTANT_HOME@ 数据根（默认 ~/.dsh-assistant）
+#   @CONFIG_DIR@   env 文件所在目录（默认 ~/.config/dsh-assistant）
+#   @NODE_BIN_DIR@ Node 的绝对目录（版本管理器给出的目录）—— 必须钉死版本路径：
+#                  systemd 用户单元拿不到版本管理器的 shell 初始化 PATH，不钉死就会找不到 node。
+#   @PNPM_BIN_DIR@ pnpm 的 bin 目录
+#
+# 三个刻意的写法：
+#  1. PATH 里放绝对版本路径（代价：版本管理器换默认版本后要重跑 install.sh）；
+#  2. 代理依赖是可选的：需要 `Wants/After=<proxy>.service` 时，在
+#     ~/.config/systemd/user/dsh-assistant.service.d/ 加一个 drop-in；
+#  3. 不写 network-online.target：它不属于用户管理器，写了是无效依赖。
+[Unit]
+Description=Personal AI Assistant
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+ExecStartPre=@REPO_ROOT@/deploy/bin/identity-snapshot.sh
+ExecStart=@DSH_BIN@ --profile assistant
+Environment=DSH_HOME=@ASSISTANT_HOME@
+Environment=HOME=%h
+Environment=PATH=@NODE_BIN_DIR@:@PNPM_BIN_DIR@:/usr/local/bin:/usr/bin:/bin
+EnvironmentFile=@CONFIG_DIR@/env
+# 代理（http_proxy/https_proxy/no_proxy/NODE_USE_ENV_PROXY）放在 EnvironmentFile 里：
+# 地址属于本机环境，不进仓库。
+# 基础进程约束：禁止提权并隔离 /tmp；文件写入策略由 DSH 配置决定。
+NoNewPrivileges=yes
+PrivateTmp=yes
+RestrictSUIDSGID=yes
+WorkingDirectory=@ASSISTANT_HOME@/workspace
+Restart=always
+RestartSec=5
+TimeoutStopSec=45
+
+[Install]
+WantedBy=default.target

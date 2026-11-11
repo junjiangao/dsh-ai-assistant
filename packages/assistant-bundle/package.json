@@ -1,0 +1,26 @@
+{
+  "name": "@junjiangao/assistant-bundle",
+  "version": "0.1.0",
+  "private": true,
+  "description": "个人 AI 助理的 bundle patch 层：删除 Web 表面、身份注入、preset 快照",
+  "type": "module",
+  "license": "MIT",
+  "dsh": {
+    "bundle": {
+      "patch": [
+        "./cordis.patch.yml",
+        "./generated/preset-standard.patch.yml"
+      ]
+    }
+  },
+  "files": [
+    "cordis.patch.yml",
+    "generated/",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "dependencies": {
+    "@junjiangao/assistant-startup": "file:../assistant-startup",
+    "@junjiangao/channel-core": "file:../channel-core",
+    "@junjiangao/channel-telegram": "file:../channel-telegram"
+  }
+}

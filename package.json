@@ -1,0 +1,27 @@
+{
+  "name": "dsh-ai-assistant",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@10.18.3",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "test": "node --test packages/channel-core/test/*.test.js packages/channel-telegram/test/*.test.js packages/assistant-startup/test/*.test.js",
+    "typecheck": "tsc -p tsconfig.json",
+    "verify": "pnpm run typecheck && pnpm run test && node deploy/gen-preset.mjs --check",
+    "gen:preset": "node deploy/gen-preset.mjs",
+    "check:preset": "node deploy/gen-preset.mjs --check"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^24.19.2",
+    "js-yaml": "^4.3.2",
+    "typescript": "^5.9.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/junjiangao/dsh-ai-assistant.git"
+  }
+}

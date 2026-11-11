@@ -1,0 +1,21 @@
+{
+  "name": "@junjiangao/channel-core",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "description": "通道无关的治理层：路由、收据、投递账本、限速队列、提问应答、心跳与单实例锁",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src/"
+  ],
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "test": "node --test 'test/*.test.js'"
+  }
+}

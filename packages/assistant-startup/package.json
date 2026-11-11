@@ -1,0 +1,25 @@
+{
+  "name": "@junjiangao/assistant-startup",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "description": "助手启动器：--mode daemon/--once/--doctor、身份装配与校验",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src/"
+  ],
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "test": "node --test 'test/*.test.js'"
+  },
+  "dependencies": {
+    "@junjiangao/channel-core": "file:../channel-core",
+    "@junjiangao/channel-telegram": "file:../channel-telegram"
+  }
+}

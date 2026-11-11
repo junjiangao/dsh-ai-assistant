@@ -1,0 +1,11 @@
+# 每 5 分钟检查一次心跳；错过开机时刻也会在下一次触发。
+[Unit]
+Description=Personal AI Assistant health timer
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,24 @@
+{
+  "name": "@junjiangao/channel-telegram",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "description": "Telegram 通道适配器（占位符传输 + 真实 Bot API 传输）",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src/"
+  ],
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "test": "node --test 'test/*.test.js'"
+  },
+  "dependencies": {
+    "@junjiangao/channel-core": "file:../channel-core"
+  }
+}
